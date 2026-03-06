@@ -16,7 +16,7 @@ app.use(cors());
 app.use(`${api}/logs`, logRoutes);
 
 // 3. Error Handler (Her zaman en sonda olmalı!)
-// Express, 4 parametreli (err, req, res, next) fonksiyonu gördüğü an 
+// Express, 4 parametreli (err, req, res, next) fonksiyonu gördüğü an
 // "Tamam bu bir hata yakalayıcıdır" der ve hataları buraya paslar.
 app.use(errorHandler);
 

@@ -8,13 +8,22 @@ datasource db {
 
 // Our main "Error Log" table
 model Log {
-  id        String   @id @default(uuid())
-  project   String
-  level     String
-  message   String
-  stack     String?  // For error details
-  meta      Json?    // <-- ADDED: Flexible data field
-  count     Int      @default(1)
-  timestamp DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  project     String
+  level       String
+  message     String
+  stack       String?  // For error details
+  meta        Json?    // Flexible data field
+  count       Int      @default(1)
+  
+  // YENİ ALAN: AI analizini burada tutacağız
+  // @db.Text kullanıyoruz çünkü AI cevabı uzun olabilir, standart String yetmeyebilir.
+  aiAnalysis  String?  @db.Text 
+
+  timestamp   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Proje, hata seviyesi ve mesaj aynıysa, 
+  // Prisma bunu 'aynı kayıt' olarak kabul edecek (Upsert için kritik).
+  @@unique([project, level, message])
 }
