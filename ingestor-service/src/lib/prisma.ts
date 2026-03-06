@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
-import "dotenv/config";
+import 'dotenv/config';
 
 // 1. PostgreSQL bağlantı havuzunu oluştur
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
