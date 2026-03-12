@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,24 +9,87 @@ datasource db {
   provider = "postgresql"
 }
 
-// Our main "Error Log" table
+// --- MODELLER ---
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  fullName  String?
+  projects  Project[]
+  isDeleted Boolean   @default(false) // Kullanıcı hesabı kapatma kontrolü
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isDeleted]) // Kullanıcı listelerken hız kazandırır
+}
+
+model Project {
+  id        String    @id @default(uuid())
+  name      String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  apiKeys   ApiKey[]
+  logs      Log[]
+  isDeleted Boolean   @default(false) 
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isDeleted]) // Milyonlarca log arasında aktif projeyi bulmak için fihrist! ⚡
+  @@index([userId])    // Kullanıcının projelerini ışık hızında listelemek için
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique @default(cuid())
+  env       KeyEnv   @default(DEVELOPMENT) // <--- İŞTE BURASI KEYENV OLDU 🚀
+  isActive  Boolean  @default(true)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  isDeleted Boolean  @default(false) // Proje silinince bunlar da "yok" sayılacak
+  createdAt DateTime @default(now())
+
+  @@index([isDeleted])
+  @@index([projectId])
+}
+
 model Log {
   id          String   @id @default(uuid())
-  project     String
-  level       String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  level       LogLevel @default(INFO) // ENUM OLARAK KALDI
   message     String
-  stack       String?  // For error details
-  meta        Json?    // Flexible data field
-  count       Int      @default(1)
+  stack       String?  @db.Text
+  meta        Json?    
+  pattern     String?  
+  count       Int      @default(1)    // <--- EKSİKTİ, EKLEDİK
+  env         KeyEnv   @default(DEVELOPMENT)
   
-  // YENİ ALAN: AI analizini burada tutacağız
-  // @db.Text kullanıyoruz çünkü AI cevabı uzun olabilir, standart String yetmeyebilir.
-  aiAnalysis  String?  @db.Text 
+  aiAnalysis  String?  @db.Text       // <--- EKSİKTİ, EKLEDİK
+  isAnalyzed  Boolean  @default(false)  // <--- EKSİKTİ, EKLEDİK
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt       // <--- EKSİKTİ, EKLEDİK
 
-  timestamp   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // KRİTİK: TypeScript'teki 'projectId_level_message_env' hatasını bu satır çözer!
+  @@unique([projectId, level, message, env]) 
+  
+  @@index([projectId])
+  @@index([level])
+  @@index([env])
+}
 
-  // Proje, hata seviyesi ve mesaj aynıysa, 
-  // Prisma bunu 'aynı kayıt' olarak kabul edecek (Upsert için kritik).
-  @@unique([project, level, message])
+// --- ENUMLAR ---
+
+enum KeyEnv { // <--- İSİM DÜZELTİLDİ: KeyEnv
+  DEVELOPMENT
+  PRODUCTION
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
 }
