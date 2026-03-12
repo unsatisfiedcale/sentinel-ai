@@ -1,26 +1,40 @@
 import prisma from '../lib/prisma.js';
 import { LogData } from '../schemas/log.schemas.js';
+import { PatternService } from './pattern.service.js';
+import { Prisma } from '@prisma/client';
+
 export class LogService {
   static async processLog(data: LogData) {
-    const { project, level, message, stack, meta } = data;
+    // projectId ve env artık verinin içinde zorunlu
+    const { projectId, env, level, message, stack, meta } = data;
+
+    const normalizedMessage = PatternService.normalize(message);
+    const metaForDb: Prisma.InputJsonValue = meta ?? {};
 
     try {
-      // UPSERT: Aynı hatadan varsa count artır, yoksa yeni kayıt aç.
       const result = await prisma.log.upsert({
         where: {
-          project_level_message: { project, level, message },
+          // Şemadaki @@unique([projectId, level, message, env]) kuralına tam uyum:
+          projectId_level_message_env: {
+            projectId,
+            level,
+            message: normalizedMessage,
+            env,
+          },
         },
         update: {
           count: { increment: 1 },
           updatedAt: new Date(),
         },
         create: {
-          project,
+          projectId,
+          env,
           level,
-          message,
+          message: normalizedMessage,
           stack,
-          meta,
+          meta: metaForDb,
           count: 1,
+          aiAnalysis: 'AI_WAITING',
         },
       });
 
